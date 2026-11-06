@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bhashini Legal Translation Studio</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #eef2f7; color: #333; }
+        header { background-color: #1a237e; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        h2 { margin: 0; font-size: 22px; }
+        .controls { padding: 15px 30px; background: white; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid #ddd; flex-wrap: wrap; }
+        .page-selectors { display: none; align-items: center; gap: 8px; background: #f5f5f5; padding: 5px 12px; border-radius: 4px; border: 1px solid #ccc; }
+        .page-selectors input { width: 50px; padding: 5px; border: 1px solid #bbb; border-radius: 3px; font-family: inherit; }
+        .instruction-box { flex: 1; min-width: 250px; }
+        .instruction-box input { width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: inherit; }
+        button { background-color: #1a237e; color: white; padding: 10px 22px; border: none; cursor: pointer; font-size: 15px; border-radius: 4px; font-weight: 600; transition: background 0.2s; white-space: nowrap; }
+        button:hover { background-color: #283593; }
+        .download-btn { background-color: #2e7d32; display: none; }
+        .download-btn:hover { background-color: #388e3c; }
+        input[type="file"] { font-size: 15px; }
+        .workspace { display: flex; height: calc(100vh - 130px); gap: 20px; padding: 20px; box-sizing: border-box; }
+        .pane-left { flex: 1; background: #525659; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .pane-header { background: #333; color: white; padding: 10px 15px; font-weight: 600; font-size: 14px; }
+        .preview-container { flex: 1; display: flex; justify-content: center; align-items: center; overflow: auto; padding: 15px; }
+        iframe, img { width: 100%; height: 100%; border: none; background: white; border-radius: 4px; object-fit: contain; }
+        .placeholder-text { color: #aaa; text-align: center; font-size: 16px; }
+        .pane-right { flex: 1; background: #e0e0e0; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .word-page { flex: 1; margin: 20px auto; width: 90%; max-width: 800px; background: white; box-shadow: 0 0 15px rgba(0,0,0,0.15); padding: 40px; box-sizing: border-box; overflow-y: auto; border-radius: 2px; }
+        textarea { width: 100%; height: 100%; border: none; outline: none; font-family: 'Calibri', Arial, sans-serif; font-size: 16px; line-height: 1.6; resize: none; background: transparent; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h2>Bhashini Legal Translation Studio</h2>
+        <span style="font-size: 14px; opacity: 0.8;">Cloud Edition (Secure)</span>
+    </header>
+
+    <div class="controls">
+        <input type="file" id="fileInput" accept=".pdf, .png, .jpg, .jpeg" onchange="previewFile()">
+        
+        <div id="pageSelectGroup" class="page-selectors">
+            <span style="font-size: 14px; font-weight: 600; color: #444;">Pages:</span>
+            <input type="number" id="startPage" placeholder="Start" min="1">
+            <span style="font-size: 14px; color: #666;">to</span>
+            <input type="number" id="endPage" placeholder="End" min="1">
+        </div>
+
+        <div class="instruction-box">
+            <input type="text" id="customInstructions" placeholder="Dictionary & Rules (e.g. Hum = I, Humlog = We)">
+        </div>
+
+        <button onclick="translateContent()">Translate Document</button>
+        <button id="downloadBtn" class="download-btn" onclick="downloadWordDoc()">Download Word (.docx)</button>
+    </div>
+
+    <div class="workspace">
+        <div class="pane-left">
+            <div class="pane-header">Original Source Preview</div>
+            <div class="preview-container" id="previewBox">
+                <div class="placeholder-text">Upload a PDF or Image to preview here...</div>
+            </div>
+        </div>
+
+        <div class="pane-right">
+            <div class="pane-header">English Translation (Word Workspace)</div>
+            <div class="word-page">
+                <textarea id="targetText" placeholder="Your formatted translation will slide and appear here..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let savedDownloadFilename = "";
+
+        function previewFile() {
+            const fileInput = document.getElementById("fileInput");
+            const previewBox = document.getElementById("previewBox");
+            const pageSelectGroup = document.getElementById("pageSelectGroup");
+            
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const fileURL = URL.createObjectURL(file);
+                
+                if (file.type === "application/pdf") {
+                    previewBox.innerHTML = `<iframe src="${fileURL}"></iframe>`;
+                    pageSelectGroup.style.display = "flex";
+                } else {
+                    previewBox.innerHTML = `<img src="${fileURL}" alt="Uploaded Preview">`;
+                    pageSelectGroup.style.display = "none";
+                }
+            }
+        }
+
+        async function translateContent() {
+            const targetBox = document.getElementById("targetText");
+            const fileInput = document.getElementById("fileInput");
+            const customInstructions = document.getElementById("customInstructions").value;
+            const downloadBtn = document.getElementById("downloadBtn");
+            
+            targetBox.value = "1. AI Extracting Format & Reading Text...\n2. Translating and Enforcing Legal Dictionary...";
+            downloadBtn.style.display = "none";
+            
+            let formData = new FormData();
+            if (fileInput.files.length > 0) {
+                formData.append("file", fileInput.files[0]);
+                if (fileInput.files[0].type === "application/pdf") {
+                    const startPage = document.getElementById("startPage").value;
+                    const endPage = document.getElementById("endPage").value;
+                    if (startPage) formData.append("start_page", startPage);
+                    if (endPage) formData.append("end_page", endPage);
+                }
+                if (customInstructions) {
+                    formData.append("custom_instructions", customInstructions);
+                }
+            } else {
+                targetBox.value = "Please choose a PDF or image file first.";
+                return;
+            }
+
+            try {
+                // Notice this now uses a relative internet path, not localhost!
+                const response = await fetch("/api/translate", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    targetBox.value = result.output[0].target;
+                    savedDownloadFilename = result.download_filename;
+                    downloadBtn.style.display = "inline-block"; 
+                } else {
+                    targetBox.value = "Error: " + (result.error || "Translation failed.");
+                }
+            } catch (error) {
+                targetBox.value = "Connection error. Make sure your server is running.";
+            }
+        }
+
+        function downloadWordDoc() {
+            if (savedDownloadFilename) {
+                // Notice this also uses a relative internet path
+                window.location.href = `/api/download/${savedDownloadFilename}`;
+            }
+        }
+    </script>
+</body>
+</html>
