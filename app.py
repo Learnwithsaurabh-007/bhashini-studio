@@ -19,8 +19,7 @@ AUTHORIZED_USERNAME = "Berlin"
 AUTHORIZED_PASSWORD = "SAMS123"
 
 # Paste your Gemini API key here
-GEMINI_API_KEY = "AQ.Ab8RN6JIz2tFWAuk8YZmkCwSSyxn27T9NdOESUVlrwOQ-3ZH2Q"
-client = genai.Client(api_key=GEMINI_API_KEY)
+client = genai.Client()
 
 UPLOAD_FOLDER = 'temp_uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
