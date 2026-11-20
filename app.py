@@ -82,78 +82,49 @@ def translate():
                 
                 os.remove(filepath)
                 
-                # PHASE 1: OCR
-                ocr_prompt = """
-                Extract all text from these document pages exactly as it appears in Hindi. 
-                Preserve all paragraphs, tables, indentations, and numbered lists perfectly. 
-                Do NOT translate the text. Just return the extracted Hindi text with flawless layout.
-                """
-                
-                ocr_content = [ocr_prompt] + images_to_process
-                extracted_hindi = ""
-                
-                max_retries = 3
-                retry_delay = 2
-                
-                for attempt in range(max_retries):
-                    try:
-                        ocr_response = client.models.generate_content(
-                            model='gemini-3.8-flash',
-                            contents=ocr_content
-                        )
-                        extracted_hindi = ocr_response.text
-                        break
-                    except Exception as e:
-                        if "503" in str(e) and attempt < max_retries - 1:
-                            print(f"Server Busy (503). Retrying in {retry_delay} seconds...")
-                            time.sleep(retry_delay)
-                            retry_delay *= 2
-                        else:
-                            raise e
+               # Resize large photos so upload and processing are fast
+        for img in images_to_process:
+            img.thumbnail((1600, 1600))
 
-                if not extracted_hindi or not extracted_hindi.strip():
-                    return jsonify({'error': 'No text found during extraction.'}), 400
+        # COMBINED 1-STEP OCR & TRANSLATION
+        combined_prompt = f"""
+You are a meticulous Indian High Court legal translator and editor.
+Carefully read the Hindi text from these document pages and translate it directly into formal English.
+Preserve all paragraphs, tables, indentations, and numbered lists perfectly.
 
-                # PHASE 2: TRANSLATION
-                translate_prompt = f"""
-                You are a meticulous Indian High Court legal translator and editor. 
-                I am providing the exact extracted Hindi text from a legal document.
-                
-                Translate the Hindi text into formal English.
-                
-                PERMANENT LEGAL RULES TO ENFORCE:
-                {CORE_LEGAL_RULES}
-                
-                ON-THE-FLY INSTRUCTIONS FOR THIS DOCUMENT:
-                {custom_instructions if custom_instructions else "None"}
-                
-                ORIGINAL HINDI TEXT:
-                {extracted_hindi}
-                
-                Output ONLY the finalized, corrected English text. Preserve all paragraphs, tables, indentations, and numbered lists perfectly.
-                """
-                
-                final_translated_text = ""
-                retry_delay = 2
-                
-                for attempt in range(max_retries):
-                    try:
-                        trans_response = client.models.generate_content(
-                            model='gemini-3.8-flash',
-                            contents=translate_prompt
-                        )
-                        final_translated_text = trans_response.text
-                        break
-                    except Exception as e:
-                        if "503" in str(e) and attempt < max_retries - 1:
-                            print(f"Server Busy (503). Retrying in {retry_delay} seconds...")
-                            time.sleep(retry_delay)
-                            retry_delay *= 2
-                        else:
-                            raise e
+PERMANENT LEGAL RULES TO ENFORCE:
+{CORE_LEGAL_RULES}
+
+ON-THE-FLY INSTRUCTIONS FOR THIS DOCUMENT:
+{custom_instructions if custom_instructions else "None"}
+
+Return ONLY the final English translation with flawless layout.
+"""
+
+        combined_content = [combined_prompt] + images_to_process
+        final_translated_text = ""
+
+        max_retries = 3
+        retry_delay = 2
+
+        for attempt in range(max_retries):
+            try:
+                response = client.models.generate_content(
+                    model='gemini-3.8-flash',
+                    contents=combined_content
+                )
+                final_translated_text = response.text
+                break
+            except Exception as e:
+                if "503" in str(e) and attempt < max_retries - 1:
+                    print(f"Server Busy (503). Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    raise e
 
         if not final_translated_text or not final_translated_text.strip():
-            return jsonify({'error': 'Translation phase failed.'}), 400
+            return jsonify({'error': 'Translation failed.'}), 400
         
         doc = Document()
         doc.add_heading(f"Translation: {original_filename}", level=1)
