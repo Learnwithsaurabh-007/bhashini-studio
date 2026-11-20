@@ -110,7 +110,7 @@ Return ONLY the final English translation with flawless layout.
         for attempt in range(max_retries):
             try:
                 response = client.models.generate_content(
-                    model='gemini-3.8-flash',
+                   model='gemini-3.5-flash-lite',
                     contents=combined_content
                 )
                 final_translated_text = response.text
